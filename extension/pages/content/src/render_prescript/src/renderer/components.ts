@@ -826,7 +826,7 @@ const extractFunctionName = (rawContent: string): string | null => {
   const isJSON = rawContent.includes('"type"') && rawContent.includes('function_call_start');
 
   if (isJSON) {
-    // Extract from JSON format
+    // Primary: parse each line as JSON, look for function_call_start with name
     const lines = rawContent.split('\n');
     for (const line of lines) {
       try {
@@ -839,6 +839,24 @@ const extractFunctionName = (rawContent: string): string | null => {
         }
       } catch (e) {
         // Skip invalid JSON lines
+      }
+    }
+    // Fallback: regex match if JSON.parse choked on every line (e.g. ChatGPT
+    // injects syntax-highlight spans or zero-width markers that break parse
+    // but leave the name field intact in textContent). Same shape the upstream
+    // jsonFunctionParser uses for its lenient pass.
+    const regexMatch = rawContent.match(/"type"\s*:\s*"function_call_start"[^}]*?"name"\s*:\s*"([^"]+)"/);
+    if (regexMatch && regexMatch[1]) {
+      // Reject placeholder values that some models leak through from the
+      // instruction examples (`TOOL_NAME`, `<...>` template markers).
+      const candidate = regexMatch[1];
+      const isPlaceholder =
+        candidate === 'TOOL_NAME' ||
+        candidate.startsWith('<') ||
+        candidate.includes('PLACEHOLDER') ||
+        candidate.includes('REAL_');
+      if (!isPlaceholder) {
+        return candidate;
       }
     }
     return null;

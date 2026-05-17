@@ -35,16 +35,22 @@ then continue with the result in hand.
 
 # Format — one call per reply
 
-Always emit calls inside a fenced \`jsonl\` block, exactly this shape:
+Always emit calls inside a fenced \`jsonl\` block, exactly this shape, but
+REPLACE every \`<...>\` placeholder with the real value. They are template
+markers, not literal strings:
 
 \`\`\`jsonl
-{"type": "function_call_start", "name": "TOOL_NAME", "call_id": 1}
-{"type": "description", "text": "Short one-line of why"}
-{"type": "parameter", "key": "param_name", "value": "param_value"}
+{"type": "function_call_start", "name": "<one of the discord_* tools listed below>", "call_id": 1}
+{"type": "description", "text": "<short one-line of why>"}
+{"type": "parameter", "key": "<actual_parameter_name>", "value": "<actual_value>"}
 {"type": "function_call_end", "call_id": 1}
 \`\`\`
 
 call_id is a per-conversation counter starting at 1, increment for each call.
+
+⚠ DO NOT emit \`"name": "TOOL_NAME"\` literally — \`TOOL_NAME\` is a placeholder,
+not a real tool. The bridge will reject anything that isn't an actual
+\`discord_*\` name from the list below.
 
 # Rules
 

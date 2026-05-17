@@ -58,8 +58,7 @@ export const toolList = [
       properties: {
         channelId: { type: "string" },
         message: { type: "string" },
-        replyToMessageId: { type: "string" },
-        privacy_confirmed: { type: "boolean", description: "Set to true after running the 5Qs privacy checklist. Required for sending." }
+        replyToMessageId: { type: "string" }
       },
       required: ["channelId", "message"]
     }

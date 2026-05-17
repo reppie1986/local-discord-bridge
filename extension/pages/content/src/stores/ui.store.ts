@@ -45,11 +45,14 @@ const initialSidebarState: SidebarState = {
 };
 
 const initialUserPreferences: UserPreferences = {
-  // KISS fork: auto-execute and auto-submit ON by default. Gremy emits the
-  // tool call, the bridge runs it, the result lands in chat without a click.
+  // Local Discord Bridge defaults — designed around consent, not convenience:
+  //   model proposes → system pauses → human reviews → human clicks Run.
+  // The click IS the consent boundary. autoExecute=false enforces it.
+  // autoSubmit stays on so once the human has consented by clicking Run,
+  // the result paste-back and continuation happens without further clicks.
   autoSubmit: true,
-  autoInsert: false,   // leave manual — user picks WHEN to insert the prompt
-  autoExecute: true,   // auto-run detected tool calls instead of needing Run button
+  autoInsert: false,    // user picks WHEN to insert the prompt
+  autoExecute: false,   // human must click Run on each tool call — that click is consent
   notifications: true,
   theme: 'system', // Default theme
   language: navigator.language || 'en-US',

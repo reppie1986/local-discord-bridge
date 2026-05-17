@@ -7,8 +7,7 @@ export const DiscordLoginSchema = z.object({
 export const SendMessageSchema = z.object({
     channelId: z.string(),
     message: z.string(),
-    replyToMessageId: z.string().optional(),
-    privacy_confirmed: z.boolean().default(false).describe("REQUIRED: Confirm you have run the 5Qs privacy checklist before posting. Set to true only after reviewing.")
+    replyToMessageId: z.string().optional()
 });
 
 export const GetForumChannelsSchema = z.object({

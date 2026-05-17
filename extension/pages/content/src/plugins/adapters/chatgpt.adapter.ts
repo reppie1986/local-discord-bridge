@@ -30,8 +30,18 @@ export class ChatGPTAdapter extends BaseAdapterPlugin {
   private readonly selectors = {
     // Primary chat input selector (ProseMirror contenteditable)
     CHAT_INPUT: '#prompt-textarea, .ProseMirror[contenteditable="true"], div[contenteditable="true"][data-id*="prompt"]',
-    // Submit button selectors (multiple fallbacks)
-    SUBMIT_BUTTON: 'button[data-testid="send-button"], button[aria-label*="Send"], button[data-testid="fruitjuice-send-button"], button:has(svg) + button:has(svg[viewBox="0 0 20 20"])',
+    // Submit button selectors — ChatGPT renames these every few months. Listed
+    // newest-first so we hit current UI before falling back to legacy IDs.
+    SUBMIT_BUTTON: [
+      'button[data-testid="composer-submit-button"]',
+      'button[data-testid="composer-send-button"]',
+      'button[data-testid="send-button"]',
+      'button[data-testid="fruitjuice-send-button"]',
+      'button[aria-label="Send prompt"]',
+      'button[aria-label*="Send"]',
+      'form button[type="submit"]',
+      'main form button:has(svg)',
+    ].join(', '),
     // File upload related selectors
     FILE_UPLOAD_BUTTON: '#upload-file-btn, button[aria-label*="Add photos"], button[data-testid="composer-action-file-upload"] button',
     FILE_INPUT: 'input[type="file"][multiple]',
