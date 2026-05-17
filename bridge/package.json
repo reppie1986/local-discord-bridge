@@ -1,0 +1,49 @@
+{
+  "name": "local-discord-bridge-server",
+  "version": "0.1.0",
+  "description": "Local Discord MCP server. Vendored and patched from barryyip0625/mcp-discord (CORS middleware added for browser-extension callers).",
+  "main": "build/index.js",
+  "bin": {
+    "local-discord-bridge-server": "build/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "discord",
+    "companion",
+    "local-discord-bridge"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cindiekinzz-coder/local-discord-bridge.git"
+  },
+  "files": [
+    "build/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/node": "^20.17.50",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "cors": "^2.8.5",
+    "discord.js": "^14.19.3",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "zod": "^3.25.13"
+  }
+}

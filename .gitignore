@@ -1,0 +1,32 @@
+# Dependencies
+**/node_modules/
+
+# Build output
+**/dist/
+**/dist-zip/
+**/build/
+**/.turbo/
+**/*.tsbuildinfo
+extension/chrome-extension/manifest.js
+extension/eslint.config.js
+extension/**/tailwind-output.css
+
+# Env files — bridge.env holds your DISCORD_TOKEN, never commit it
+bridge.env
+**/.env
+**/.env.*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Local dev
+**/.pnpm-store/
