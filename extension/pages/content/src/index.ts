@@ -107,6 +107,43 @@ function setupSidebarRecovery(): void {
 initializeLogger();
 logMessage('Content script loaded - initializing with Session 10 architecture');
 
+// Bootstrap automation state on window SYNCHRONOUSLY so the function-block
+// renderer can see it before the async AutomationService finishes initialising.
+// Without this, the first JSONL block on a fresh page hits a race where
+// __mcpAutomationState is undefined, autoExecute reads as false, and the call
+// never fires until the user refreshes the tab.
+(function bootstrapAutomationState() {
+  const fallback = {
+    autoExecute: true,
+    autoSubmit: true,
+    autoInsert: false,
+    autoExecuteDelay: 2,
+    autoSubmitDelay: 2,
+    autoInsertDelay: 2,
+  };
+  try {
+    const raw = localStorage.getItem('gremy-discord-bridge-ui-store-v1');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const prefs = parsed?.state?.preferences;
+      if (prefs) {
+        (window as any).__mcpAutomationState = {
+          autoExecute: prefs.autoExecute !== false,
+          autoSubmit: prefs.autoSubmit !== false,
+          autoInsert: prefs.autoInsert === true,
+          autoExecuteDelay: typeof prefs.autoExecuteDelay === 'number' ? prefs.autoExecuteDelay : 2,
+          autoSubmitDelay: typeof prefs.autoSubmitDelay === 'number' ? prefs.autoSubmitDelay : 2,
+          autoInsertDelay: typeof prefs.autoInsertDelay === 'number' ? prefs.autoInsertDelay : 2,
+        };
+        return;
+      }
+    }
+  } catch {
+    /* fall through to defaults */
+  }
+  (window as any).__mcpAutomationState = fallback;
+})();
+
 // Initialize URL change tracking for demographic analytics
 let lastUrl = window.location.href;
 const demographicData = collectDemographicData();
