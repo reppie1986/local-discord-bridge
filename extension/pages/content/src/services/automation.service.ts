@@ -83,6 +83,7 @@ export interface AutomationState {
   autoInsert: boolean;
   autoSubmit: boolean;
   autoExecute: boolean;
+  autoExecuteTools: Record<string, boolean>;
   autoInsertDelay: number;
   autoSubmitDelay: number;
   autoExecuteDelay: number;
@@ -130,6 +131,9 @@ export class AutomationService {
 
     // Listen for MCP state changes to update automation availability
     this.setupMCPStateListener();
+
+    // Listen for preferences changes to update the exposed state
+    this.setupPreferencesListener();
 
     // Expose initial automation state to window for render_prescript access
     await this.exposeAutomationStateToWindow();
@@ -186,6 +190,15 @@ export class AutomationService {
     eventBus.on('connection:status-changed', ({ status }) => {
       logger.debug('[AutomationService] MCP connection status changed:', status);
       // Could add logic here to disable automation when MCP is disconnected
+    });
+  }
+
+  /**
+   * Set up listener for user preference changes
+   */
+  private setupPreferencesListener(): void {
+    eventBus.on('ui:preferences-updated', () => {
+      this.exposeAutomationStateToWindow();
     });
   }
 
@@ -259,6 +272,7 @@ export class AutomationService {
         autoInsert: preferences.autoInsert || false,
         autoSubmit: preferences.autoSubmit || false,
         autoExecute: preferences.autoExecute || false,
+        autoExecuteTools: preferences.autoExecuteTools || {},
         autoInsertDelay: preferences.autoInsertDelay || 0,
         autoSubmitDelay: preferences.autoSubmitDelay || 0,
         autoExecuteDelay: preferences.autoExecuteDelay || 0,

@@ -4,55 +4,37 @@ import { config as dotenvConfig } from 'dotenv';
 import { DiscordMCPServer } from './server.js';
 import { StdioTransport, StreamableHttpTransport } from './transport.js';
 import { info, error } from './logger.js';
+import { createListenerManager } from './tools/listener.js';
+import { loadConfig } from './config.js';
 
 // Load environment variables from .env file if exists
 dotenvConfig();
 
+// Load app config (scopes, etc.)
+const appConfig = loadConfig();
+info(`Loaded config with ${Object.keys(appConfig.scopes).length} scope(s): ${Object.keys(appConfig.scopes).join(', ') || 'none'}`);
+
 // Configuration with priority for command line arguments
-const config = {
-    DISCORD_TOKEN: (() => {
-        try {
-            // First try to get from command line arguments
-            const configIndex = process.argv.indexOf('--config');
-            if (configIndex !== -1 && configIndex + 1 < process.argv.length) {
-                const configArg = process.argv[configIndex + 1];
-                // Handle both string and object formats
-                if (typeof configArg === 'string') {
-                    try {
-                        const parsedConfig = JSON.parse(configArg);
-                        return parsedConfig.DISCORD_TOKEN;
-                    } catch (err) {
-                        // If not valid JSON, try using the string directly
-                        return configArg;
-                    }
-                }
-            }
-            // Then try environment variable
-            return process.env.DISCORD_TOKEN;
-        } catch (err) {
-            error('Error parsing config: ' + String(err));
-            return null;
-        }
-    })(),
-    TRANSPORT: (() => {
-        // Check for transport type argument
-        const transportIndex = process.argv.indexOf('--transport');
-        if (transportIndex !== -1 && transportIndex + 1 < process.argv.length) {
-            return process.argv[transportIndex + 1];
-        }
-        // Default to stdio
-        return 'stdio';
-    })(),
-    HTTP_PORT: (() => {
-        // Check for port argument
-        const portIndex = process.argv.indexOf('--port');
-        if (portIndex !== -1 && portIndex + 1 < process.argv.length) {
-            return parseInt(process.argv[portIndex + 1]);
-        }
-        // Default port for MCP
-        return 8080;
-    })()
-};
+const DISCORD_TOKEN = (() => {
+    if (appConfig.discord?.token) return appConfig.discord.token;
+    return process.env.DISCORD_TOKEN || null;
+})();
+
+const TRANSPORT = (() => {
+    const transportIndex = process.argv.indexOf('--transport');
+    if (transportIndex !== -1 && transportIndex + 1 < process.argv.length) {
+        return process.argv[transportIndex + 1];
+    }
+    return 'stdio';
+})();
+
+const HTTP_PORT = (() => {
+    const portIndex = process.argv.indexOf('--port');
+    if (portIndex !== -1 && portIndex + 1 < process.argv.length) {
+        return parseInt(process.argv[portIndex + 1]);
+    }
+    return 8081;
+})();
 
 // Create Discord client
 const client = new Client({
@@ -64,13 +46,28 @@ const client = new Client({
 });
 
 // Save token to client for login handler
-if (config.DISCORD_TOKEN) {
-    client.token = config.DISCORD_TOKEN;
+if (DISCORD_TOKEN) {
+    client.token = DISCORD_TOKEN;
 }
+
+// Set up Discord event listener (messageCreate only for phase 1)
+// Listener checks client.user?.id at event time, so it's safe to bind before login
+const channelAllowlist = (process.env.DISCORD_CHANNEL_ALLOWLIST ?? "")
+  .split(",")
+  .map(id => id.trim())
+  .filter(Boolean);
+
+const listenerManager = createListenerManager(client, {
+    ignoreBots: false,
+    ignoreSelf: true,
+    channelAllowlist,
+});
+client.on('messageCreate', (msg) => listenerManager.onMessageCreate(msg));
+info('Discord message listener registered (observe-only, no auto-reply)');
 
 // Auto-login on startup if token is available
 const autoLogin = async () => {
-    const token = config.DISCORD_TOKEN;
+    const token = DISCORD_TOKEN;
     if (token) {
         try {
             await client.login(token);
@@ -89,15 +86,15 @@ const autoLogin = async () => {
 
 // Initialize transport based on configuration
 const initializeTransport = () => {
-    switch (config.TRANSPORT.toLowerCase()) {
+    switch (TRANSPORT.toLowerCase()) {
         case 'http':
-            info(`Initializing HTTP transport on 0.0.0.0:${config.HTTP_PORT}`);
-            return new StreamableHttpTransport(config.HTTP_PORT);
+            info(`Initializing HTTP transport on 0.0.0.0:${HTTP_PORT}`);
+            return new StreamableHttpTransport(HTTP_PORT, appConfig.scopes);
         case 'stdio':
             info('Initializing stdio transport');
             return new StdioTransport();
         default:
-            error(`Unknown transport type: ${config.TRANSPORT}. Falling back to stdio.`);
+            error(`Unknown transport type: ${TRANSPORT}. Falling back to stdio.`);
             return new StdioTransport();
     }
 };
@@ -107,14 +104,14 @@ await autoLogin();
 
 // Create and start MCP server with selected transport
 const transport = initializeTransport();
-const mcpServer = new DiscordMCPServer(client, transport);
+const mcpServer = new DiscordMCPServer(client, transport, appConfig.scopes);
 
 try {
     await mcpServer.start();
     info('MCP server started successfully');
     
     // Keep the Node.js process running
-    if (config.TRANSPORT.toLowerCase() === 'http') {
+    if (TRANSPORT.toLowerCase() === 'http') {
         // Send a heartbeat every 30 seconds to keep the process alive
         setInterval(() => {
             info('MCP server is running');

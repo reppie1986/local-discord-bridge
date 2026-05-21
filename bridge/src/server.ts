@@ -5,7 +5,9 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { toolList } from './toolList.js';
+import { buildToolList } from './toolList.js';
+import { buildScopedHandlerMap } from './tools/scoped.js';
+import { ScopeConfig } from './config.js';
 import {
   createToolContext,
   loginHandler,
@@ -37,16 +39,23 @@ import {
 } from './tools/tools.js';
 import { MCPTransport } from './transport.js';
 import { info, error } from './logger.js';
+import { getPendingEventsHandler, ackEventHandler } from './tools/listener.js';
 
 export class DiscordMCPServer {
   private server: Server;
   private toolContext: ReturnType<typeof createToolContext>;
   private clientStatusInterval: NodeJS.Timeout | null = null;
+  private scopedHandlers: Map<string, (args: any, context: ReturnType<typeof createToolContext>) => Promise<any>>;
+  private scopes: Record<string, ScopeConfig>;
 
   constructor(
     private client: Client, 
-    private transport: MCPTransport
+    private transport: MCPTransport,
+    scopes: Record<string, ScopeConfig> = {}
   ) {
+    this.scopes = scopes;
+    this.scopedHandlers = buildScopedHandlerMap(scopes) as any;
+
     this.server = new Server(
       {
         name: "MCP-Discord",
@@ -67,7 +76,7 @@ export class DiscordMCPServer {
     // Set up the tool list
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
-        tools: toolList
+        tools: buildToolList(this.scopes)
       };
     });
 
@@ -76,6 +85,12 @@ export class DiscordMCPServer {
       const { name, arguments: args } = request.params;
 
       try {
+        // Check scoped tools first
+        const scopedHandler = this.scopedHandlers.get(name);
+        if (scopedHandler) {
+          return scopedHandler(args, this.toolContext);
+        }
+
         let toolResponse;
         switch (name) {
           case "discord_create_category":
@@ -200,6 +215,14 @@ export class DiscordMCPServer {
           case "discord_fetch_image":
             this.logClientState("before discord_fetch_image handler");
             toolResponse = await fetchImageHandler(args, this.toolContext);
+            return toolResponse;
+
+          case "discord_get_pending_events":
+            toolResponse = await getPendingEventsHandler(args, this.toolContext);
+            return toolResponse;
+
+          case "discord_ack_event":
+            toolResponse = await ackEventHandler(args, this.toolContext);
             return toolResponse;
 
           default:

@@ -28,7 +28,7 @@ if (-not $env:DISCORD_TOKEN) {
     exit 1
 }
 
-$port = if ($env:MCP_DISCORD_PORT) { $env:MCP_DISCORD_PORT } else { '8080' }
+$port = if ($env:MCP_DISCORD_PORT) { $env:MCP_DISCORD_PORT } else { '8081' }
 $entry = Join-Path $repoRoot 'bridge\build\index.js'
 
 if (-not (Test-Path $entry)) {

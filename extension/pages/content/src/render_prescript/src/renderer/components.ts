@@ -1359,13 +1359,20 @@ export const displayResult = (
       try {
         // Check if result has the new format with content array
         if (result && result.content && Array.isArray(result.content)) {
-          // Extract text from content array
+          // Extract text and image content from content array
           const textParts = result.content
             .filter((item: any) => item.type === 'text' && item.text)
             .map((item: any) => item.text);
 
-          if (textParts.length > 0) {
-            rawResultText = textParts.join('\n');
+          // Include image content as markdown images for ChatGPT to render
+          const imageParts = result.content
+            .filter((item: any) => item.type === 'image' && item.data && item.mimeType)
+            .map((item: any) => `![image](data:${item.mimeType};base64,${item.data})`);
+
+          const allParts = [...textParts, ...imageParts];
+
+          if (allParts.length > 0) {
+            rawResultText = allParts.join('\n\n');
             resultContent.textContent = rawResultText;
           } else {
             // Fallback to full JSON if no text content found

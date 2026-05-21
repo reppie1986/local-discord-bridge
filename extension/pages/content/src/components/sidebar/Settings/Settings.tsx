@@ -1,5 +1,5 @@
 import React from 'react';
-import { useUserPreferences } from '@src/hooks';
+import { useUserPreferences, useAvailableTools } from '@src/hooks';
 import { Card, CardContent } from '@src/components/ui/card';
 import { Typography } from '../ui';
 import { AutomationService } from '@src/services/automation.service';
@@ -16,8 +16,13 @@ const DEFAULT_DELAYS = {
   autoExecuteDelay: 2
 } as const;
 
+function isForcedAutoExecuteTool(name: string): boolean {
+  return name.endsWith('_ack') || name.endsWith('_pending');
+}
+
 const Settings: React.FC = () => {
   const { preferences, updatePreferences } = useUserPreferences();
+  const { tools } = useAvailableTools();
 
   // Handle delay input changes
   const handleDelayChange = (type: 'autoInsert' | 'autoSubmit' | 'autoExecute', value: string) => {
@@ -42,6 +47,12 @@ const Settings: React.FC = () => {
     AutomationService.getInstance().updateAutomationStateOnWindow().catch(console.error);
   };
 
+  const handleAutoExecuteToolToggle = (toolName: string, enabled: boolean) => {
+    const updated = { ...preferences.autoExecuteTools, [toolName]: enabled };
+    updatePreferences({ autoExecuteTools: updated });
+    AutomationService.getInstance().updateAutomationStateOnWindow().catch(console.error);
+  };
+
   // Load stored delays on component mount, set default to 2 seconds if not set
   React.useEffect(() => {
     try {
@@ -61,6 +72,11 @@ const Settings: React.FC = () => {
       localStorage.setItem('mcpDelaySettings', JSON.stringify(DEFAULT_DELAYS));
     }
   }, [updatePreferences]);
+
+  const sortedTools = React.useMemo(
+    () => [...tools].sort((a, b) => a.name.localeCompare(b.name)),
+    [tools]
+  );
 
   return (
     <div className="p-4 space-y-4">
@@ -154,6 +170,58 @@ const Settings: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {sortedTools.length > 0 && (
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
+          <CardContent className="p-4">
+            <Typography variant="h4" className="mb-1 text-slate-700 dark:text-slate-300">
+              Per-Tool Auto-Execute
+            </Typography>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              Tools ending in <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs">_ack</code> or <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs">_pending</code> always auto-execute.
+            </p>
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {sortedTools.map(tool => {
+                const isForced = isForcedAutoExecuteTool(tool.name);
+                const isEnabled = preferences.autoExecuteTools?.[tool.name] !== false;
+                return (
+                  <div
+                    key={tool.name}
+                    className={cn(
+                      "flex items-center justify-between py-1.5 px-2 rounded",
+                      "hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                    )}
+                  >
+                    <span className="text-sm text-slate-700 dark:text-slate-300 truncate mr-2">
+                      {tool.name}
+                    </span>
+                    {isForced ? (
+                      <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 whitespace-nowrap">
+                        Always
+                      </span>
+                    ) : (
+                      <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={(e) => handleAutoExecuteToolToggle(tool.name, e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className={cn(
+                          "w-8 h-4 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all",
+                          isEnabled
+                            ? "bg-blue-600 dark:bg-blue-500"
+                            : "bg-slate-300 dark:bg-slate-600"
+                        )} />
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

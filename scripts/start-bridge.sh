@@ -8,6 +8,7 @@ set -e
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
+config_file="${BRIDGE_CONFIG:-$repo_root/bridge/config.json}"
 
 env_file="$repo_root/bridge.env"
 if [[ ! -f "$env_file" ]]; then
@@ -27,7 +28,7 @@ if [[ -z "${DISCORD_TOKEN:-}" ]]; then
     exit 1
 fi
 
-port="${MCP_DISCORD_PORT:-8080}"
+port="${MCP_DISCORD_PORT:-8081}"
 entry="$repo_root/bridge/build/index.js"
 
 if [[ ! -f "$entry" ]]; then
@@ -36,6 +37,12 @@ if [[ ! -f "$entry" ]]; then
     exit 1
 fi
 
+if [[ ! -f "$config_file" ]]; then
+    echo "Cannot find config file: $config_file"
+    echo "Create it first, for example: $repo_root/bridge/config.json"
+    exit 1
+	
+fi
 echo "Starting Local Discord Bridge on http://localhost:$port/mcp"
 echo "Leave this window open. Ctrl+C to stop."
-node "$entry" --transport http --port "$port"
+node "$entry" --transport http --port "$port" --config "$config_file"

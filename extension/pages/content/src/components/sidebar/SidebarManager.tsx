@@ -22,6 +22,7 @@ const getZustandPreferences = (): UserPreferences => {
     autoSubmit: false,
     autoInsert: false,
     autoExecute: false,
+    autoExecuteTools: {},
     autoInsertDelay: 500,
     autoSubmitDelay: 1000,
     autoExecuteDelay: 500,

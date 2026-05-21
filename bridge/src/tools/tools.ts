@@ -37,6 +37,7 @@ import {
 } from './webhooks.js';
 import { sendVoiceMessageHandler } from './voice-message.js';
 import { fetchImageHandler } from './image.js';
+import { getPendingEventsHandler, ackEventHandler } from './listener.js';
 
 // Export tool handlers
 export {
@@ -65,7 +66,9 @@ export {
   listServersHandler,
   searchMessagesHandler,
   sendVoiceMessageHandler,
-  fetchImageHandler
+  fetchImageHandler,
+  getPendingEventsHandler,
+  ackEventHandler
 };
 
 // Export common types

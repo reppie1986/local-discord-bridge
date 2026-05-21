@@ -159,3 +159,13 @@ export const SendVoiceMessageSchema = z.object({
   includeText: z.boolean().optional().default(false),
   replyToMessageId: z.string().optional()
 });
+
+export const GetPendingEventsSchema = z.object({
+  guildId: z.string().optional(),
+  channelId: z.string().optional(),
+  limit: z.number().min(1).max(100).optional().default(25),
+});
+
+export const AckEventSchema = z.object({
+  eventId: z.string(),
+});

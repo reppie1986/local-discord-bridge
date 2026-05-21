@@ -283,13 +283,17 @@ const renderFunctionResultContent = (resultContent: string, contentArea: HTMLDiv
           textDiv.style.wordBreak = 'break-word';
           textDiv.textContent = item.text;
           contentArea.appendChild(textDiv);
-        } else if (item.type === 'image' && item.url) {
+        } else if (item.type === 'image' && (item.data || item.url)) {
           const imgContainer = document.createElement('div');
           imgContainer.className = 'function-result-image';
           imgContainer.style.margin = '10px 0';
 
           const img = document.createElement('img');
-          img.src = item.url;
+          if (item.data && item.mimeType) {
+            img.src = `data:${item.mimeType};base64,${item.data}`;
+          } else if (item.url) {
+            img.src = item.url;
+          }
           img.alt = item.alt || 'Image';
           img.style.maxWidth = '100%';
           img.style.borderRadius = '4px';

@@ -43,10 +43,10 @@ import { createLogger } from '@extension/shared/lib/logger';
 const logger = createLogger('BACKGROUND');
 
 // KISS fork: wired straight to mcp-discord's built-in streamable-http transport
-// running on localhost:8080/mcp (`node build/index.js --transport http`).
-const DEFAULT_SSE_URL = 'http://localhost:8080/sse';
-const DEFAULT_WEBSOCKET_URL = 'ws://localhost:8080/message';
-const DEFAULT_STREAMABLE_HTTP_URL = 'http://localhost:8080/mcp';
+// running on localhost:8081/mcp (`node build/index.js --transport http`).
+const DEFAULT_SSE_URL = 'http://localhost:8081/sse';
+const DEFAULT_WEBSOCKET_URL = 'ws://localhost:8081/message';
+const DEFAULT_STREAMABLE_HTTP_URL = 'http://localhost:8081/mcp';
 
 // Connection type management
 type ConnectionType = TransportType;

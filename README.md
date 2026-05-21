@@ -14,7 +14,7 @@ This is a small Chrome extension + local Node server that lets an AI companion i
         │                                             ▼
         │                                    ┌──────────────────┐
         └────────────────────────────────────│ Local MCP bridge │ ──► Discord
-                                             │ (Node, port 8080)│      bot
+                                             │ (Node, port 8081)│      bot
                                              └──────────────────┘
 ```
 
@@ -99,7 +99,7 @@ Read/send messages, react, manage channels, manage forums, create webhooks, send
 
 ## Security
 
-- The bridge listens on `localhost:8080` only. It is not exposed to the internet.
+- The bridge listens on `localhost:8081` only. It is not exposed to the internet.
 - Your Discord bot token lives in `bridge.env` and is gitignored. Don't commit it.
 - The extension only loads on `chatgpt.com`, `chat.openai.com`, and `gemini.google.com`. It cannot read other tabs.
 - The bridge has CORS open to any origin because Chrome extensions run from `chrome-extension://*`. If you're worried about other localhost processes hitting the bridge, restrict the `cors()` config in `bridge/src/transport.ts`.

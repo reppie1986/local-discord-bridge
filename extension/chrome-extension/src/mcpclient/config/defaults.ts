@@ -1,8 +1,8 @@
 // KISS fork: hardcoded to mcp-discord's built-in StreamableHttp transport.
-// mcp-discord listens on POST /mcp at port 8080 when started with `--transport http`.
-export const DEFAULT_WEBSOCKET_URI = 'ws://localhost:8080/message';
-export const DEFAULT_SSE_URI = 'http://localhost:8080/sse';
-export const DEFAULT_STREAMABLE_HTTP_URI = 'http://localhost:8080/mcp';
+// mcp-discord listens on POST /mcp at port 8081 when started with `--transport http`.
+export const DEFAULT_WEBSOCKET_URI = 'ws://localhost:8081/message';
+export const DEFAULT_SSE_URI = 'http://localhost:8081/sse';
+export const DEFAULT_STREAMABLE_HTTP_URI = 'http://localhost:8081/mcp';
 
 export const CONNECTION_DEFAULTS = {
   websocket: {

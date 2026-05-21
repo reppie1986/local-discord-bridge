@@ -1,3 +1,6 @@
+import { buildScopedToolDefinitions } from './tools/scoped.js';
+import { ScopeConfig } from './config.js';
+
 export const toolList = [
   {
     name: "discord_create_category",
@@ -344,14 +347,41 @@ export const toolList = [
   },
   {
     name: "discord_fetch_image",
-    description: "Fetch an image from Discord CDN and return it as base64. Uses iterative scaling to fit within token limits.",
+    description: "Fetch and scale a Discord CDN image, returning a compressed dataUri with metadata",
     inputSchema: {
       type: "object",
       properties: {
         url: { type: "string", description: "The Discord CDN image URL (from message attachments)" },
-        maxSizeKB: { type: "number", description: "Max size in KB (default 50)", default: 50 }
+        maxSizeKB: { type: "number", description: "Max compressed size in KB (default 200)", default: 200 }
       },
       required: ["url"]
     }
+  },
+  {
+    name: "discord_get_pending_events",
+    description: "Returns pending Discord message events received since last ack. Observe-only — no replies are sent automatically.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        guildId: { type: "string", description: "Optional: filter by guild/server ID" },
+        channelId: { type: "string", description: "Optional: filter by channel ID" },
+        limit: { type: "number", description: "Max events to return (1-50)", default: 25 }
+      }
+    }
+  },
+  {
+    name: "discord_ack_event",
+    description: "Acknowledges a pending Discord event by its message ID, removing it from the queue.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        eventId: { type: "string", description: "The Discord message ID to acknowledge" }
+      },
+      required: ["eventId"]
+    }
   }
-]; 
+];
+
+export function buildToolList(scopes: Record<string, ScopeConfig>): any[] {
+  return [...toolList, ...buildScopedToolDefinitions(scopes)];
+} 

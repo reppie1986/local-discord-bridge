@@ -3,7 +3,9 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import express, { Request, Response } from "express";
 import cors from "cors";
-import { toolList } from './toolList.js';
+import { buildToolList } from './toolList.js';
+import { buildScopedHandlerMap } from './tools/scoped.js';
+import { ScopeConfig } from './config.js';
 import {
   createToolContext,
   loginHandler,
@@ -29,8 +31,11 @@ import {
   createCategoryHandler,
   deleteCategoryHandler,
   listServersHandler,
-  searchMessagesHandler   
+  searchMessagesHandler,
+  sendVoiceMessageHandler,
+  fetchImageHandler   
 } from './tools/tools.js';
+import { getPendingEventsHandler, ackEventHandler } from './tools/listener.js';
 import { Client, GatewayIntentBits } from "discord.js";
 import { info, error } from './logger.js';
 
@@ -62,8 +67,12 @@ export class StreamableHttpTransport implements MCPTransport {
     private transport: StreamableHTTPServerTransport | null = null;
     private toolContext: ReturnType<typeof createToolContext> | null = null;
     private sessionId: string = '';
+    private scopedHandlers: Map<string, (args: any, context: any) => Promise<any>> = new Map();
+    private scopes: Record<string, ScopeConfig> = {};
 
-    constructor(private port: number = 8080) {
+    constructor(private port: number = 8080, scopes: Record<string, ScopeConfig> = {}) {
+        this.scopes = scopes;
+        this.scopedHandlers = buildScopedHandlerMap(scopes) as any;
         this.app = express();
         this.app.use(cors());
         this.app.use(express.json());
@@ -173,12 +182,12 @@ export class StreamableHttpTransport implements MCPTransport {
                         
                     case 'tools/list':
                         // New MCP method name format
-                        result = { tools: toolList };
+                        result = { tools: buildToolList(this.scopes) };
                         break;
                         
                     case 'list_tools':
                         // Legacy method name for backward compatibility
-                        result = { tools: toolList };
+                        result = { tools: buildToolList(this.scopes) };
                         break;
                         
                     case 'discord_login':
@@ -192,6 +201,14 @@ export class StreamableHttpTransport implements MCPTransport {
                                 tag: this.toolContext!.client.user.tag,
                             } : null
                         })}`);
+                        break;
+
+                    case 'discord_get_pending_events':
+                        result = await getPendingEventsHandler(params, this.toolContext!);
+                        break;
+
+                    case 'discord_ack_event':
+                        result = await ackEventHandler(params, this.toolContext!);
                         break;
                         
                     // Make sure Discord client is logged in for other Discord API tools 
@@ -219,6 +236,8 @@ export class StreamableHttpTransport implements MCPTransport {
                     case 'discord_delete_category':
                     case 'discord_list_servers':
                     case 'discord_search_messages':
+                    case 'discord_send_voice':
+                    case 'discord_fetch_image':
                         // Check if client is logged in
                         if (!this.toolContext!.client.isReady()) {
                             error(`Client not ready for method ${method}, client state: ${JSON.stringify({
@@ -345,6 +364,12 @@ export class StreamableHttpTransport implements MCPTransport {
                             case 'discord_search_messages':
                                 result = await searchMessagesHandler(params, this.toolContext!);
                                 break;break;
+                            case 'discord_send_voice':
+                                result = await sendVoiceMessageHandler(params, this.toolContext!);
+                                break;
+                            case 'discord_fetch_image':
+                                result = await fetchImageHandler(params, this.toolContext!);
+                                break;
                         }
                         break;
                         
@@ -357,6 +382,8 @@ export class StreamableHttpTransport implements MCPTransport {
                         
                         // Check if Discord client is logged in for Discord API tools
                         if (toolName !== 'discord_login' && 
+                            toolName !== 'discord_get_pending_events' &&
+                            toolName !== 'discord_ack_event' &&
                             toolName.startsWith('discord_') && 
                             !this.toolContext!.client.isReady()) {
                             error(`Client not ready for tool ${toolName}, client state: ${JSON.stringify({
@@ -515,8 +542,29 @@ export class StreamableHttpTransport implements MCPTransport {
                             case 'discord_search_messages':
                                 result = await searchMessagesHandler(toolArgs, this.toolContext!);
                                 break;
+
+                            case 'discord_send_voice':
+                                result = await sendVoiceMessageHandler(toolArgs, this.toolContext!);
+                                break;
+
+                            case 'discord_fetch_image':
+                                result = await fetchImageHandler(toolArgs, this.toolContext!);
+                                break;
+
+                            case 'discord_get_pending_events':
+                                result = await getPendingEventsHandler(toolArgs, this.toolContext!);
+                                break;
+
+                            case 'discord_ack_event':
+                                result = await ackEventHandler(toolArgs, this.toolContext!);
+                                break;
                                 
                             default:
+                                const scopedHandler = this.scopedHandlers.get(toolName);
+                                if (scopedHandler) {
+                                    result = await scopedHandler(toolArgs, this.toolContext!);
+                                    break;
+                                }
                                 return res.status(400).json({
                                     jsonrpc: '2.0',
                                     error: {
@@ -529,6 +577,12 @@ export class StreamableHttpTransport implements MCPTransport {
                         break;
                         
                     default:
+                        // Check scoped tool handlers
+                        const scopedHandler = this.scopedHandlers.get(method);
+                        if (scopedHandler) {
+                            result = await scopedHandler(params, this.toolContext!);
+                            break;
+                        }
                         // For method 'ping' and other non-critical methods, just return an empty result
                         // This ensures MCP compatibility for health checks and probes
                         if (method === 'ping') {

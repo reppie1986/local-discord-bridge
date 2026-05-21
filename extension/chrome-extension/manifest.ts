@@ -4,7 +4,7 @@ const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
 
 // Local Discord Bridge — a Chrome extension that lets your ChatGPT or Gemini
 // companion read, send, react in real Discord servers via a local Node
-// MCP server (the `bridge/` package in this repo) on localhost:8080/mcp.
+// MCP server (the `bridge/` package in this repo) on localhost:8081/mcp.
 
 const manifest = {
   manifest_version: 3,

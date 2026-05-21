@@ -89,6 +89,7 @@ function getAutomationState() {
       autoInsert: automationState.autoInsert || false,
       autoSubmit: automationState.autoSubmit || false,
       autoExecute: automationState.autoExecute || false,
+      autoExecuteTools: automationState.autoExecuteTools || {},
     };
   }
   
@@ -98,7 +99,27 @@ function getAutomationState() {
     autoInsert: legacyState?.autoInsert === true,
     autoSubmit: legacyState?.autoSubmit === true,
     autoExecute: legacyState?.autoExecute === true,
+    autoExecuteTools: {},
   };
+}
+
+// Runtime dedupe guard: prevents same tool+content from executing twice within 5s
+const recentAutoExecutions = new Set<string>();
+
+function isForcedAutoExecuteTool(name: string): boolean {
+  return name.endsWith('_ack') || name.endsWith('_pending');
+}
+
+function shouldAutoExecuteTool(functionName: string, state: ReturnType<typeof getAutomationState>): boolean {
+  // Forced tools always auto-execute
+  if (isForcedAutoExecuteTool(functionName)) return true;
+
+  // Global switch must be on
+  if (!state.autoExecute) return false;
+
+  // Check per-tool setting (default to true if not configured)
+  const perToolState = state.autoExecuteTools?.[functionName];
+  return perToolState !== false;
 }
 
 // Common style configurations
@@ -1510,9 +1531,9 @@ export const renderFunctionCall = (block: HTMLPreElement, isProcessingRef: { cur
 
       // Setup auto-execution
       const automationState = getAutomationState();
-      const autoExecuteEnabled = automationState.autoExecute;
       if (contentSignature && !executionTracker.isFunctionExecuted(callId, contentSignature, functionName)) {
-        if (autoExecuteEnabled !== true) {
+        // Check per-tool and forced rules
+        if (!shouldAutoExecuteTool(functionName, automationState)) {
           logger.debug(`Auto-execution disabled by user settings for block ${blockId} (${functionName})`);
           return true;
         }
@@ -1521,6 +1542,15 @@ export const renderFunctionCall = (block: HTMLPreElement, isProcessingRef: { cur
           logger.debug(`Auto-execution skipped: Block ${blockId} (${functionName}) has already been processed`);
           return true;
         }
+
+        // Runtime dedupe guard
+        const dedupeKey = `${functionName}:${contentSignature}`;
+        if (recentAutoExecutions.has(dedupeKey)) {
+          logger.debug(`Auto-execution skipped by runtime dedupe for block ${blockId} (${functionName})`);
+          return true;
+        }
+        recentAutoExecutions.add(dedupeKey);
+        setTimeout(() => recentAutoExecutions.delete(dedupeKey), 5000);
 
         executionTracker.markFunctionExecuted(callId, contentSignature, functionName);
         executionTracker.markBlockExecuted(blockId);

@@ -53,6 +53,7 @@ const initialUserPreferences: UserPreferences = {
   autoSubmit: true,
   autoInsert: false,    // user picks WHEN to insert the prompt
   autoExecute: false,   // human must click Run on each tool call — that click is consent
+  autoExecuteTools: {},  // Per-tool auto-execute overrides (empty = all follow global)
   notifications: true,
   theme: 'system', // Default theme
   language: navigator.language || 'en-US',

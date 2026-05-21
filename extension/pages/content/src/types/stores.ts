@@ -57,6 +57,7 @@ export interface UserPreferences {
   autoSubmit: boolean;
   autoInsert: boolean;  // New automation field
   autoExecute: boolean; // New automation field
+  autoExecuteTools: Record<string, boolean>; // Per-tool auto-execute overrides
   autoInsertDelay: number;  // Delay in seconds for auto insert
   autoSubmitDelay: number;  // Delay in seconds for auto submit
   autoExecuteDelay: number; // Delay in seconds for auto execute
