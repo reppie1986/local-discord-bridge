@@ -54,7 +54,7 @@ That's it. No accounts on third-party services, no infrastructure to provision.
 
 ```bash
 # 1. Clone
-git clone https://github.com/cindiekinzz-coder/local-discord-bridge.git
+git clone https://github.com/Reppie1986/local-discord-bridge.git
 cd local-discord-bridge
 
 # 2. Set up the bridge
