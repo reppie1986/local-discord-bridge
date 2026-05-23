@@ -27,6 +27,9 @@ const convertToFirefoxCompatibleManifest = (manifest: Manifest) => {
       browser_style: false,
     };
   }
+  // Firefox MV3 supports host_permissions natively — keep it separate
+  // from the API-level permissions array (storage, clipboardWrite, etc.).
+
   manifestCopy.content_security_policy = {
     extension_pages: "script-src 'self'; object-src 'self'",
   };

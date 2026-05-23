@@ -380,10 +380,13 @@ export class StreamableHttpTransport implements MCPTransport {
                         const toolName = params.name;
                         const toolArgs = params.arguments || {};
                         
-                        // Check if Discord client is logged in for Discord API tools
+                        // Check if Discord client is logged in for Discord API tools.
+                        // `discord_fetch_image` is exempt — it only fetches HTTPS URLs and
+                        // doesn't touch the Discord client.
                         if (toolName !== 'discord_login' && 
                             toolName !== 'discord_get_pending_events' &&
                             toolName !== 'discord_ack_event' &&
+                            toolName !== 'discord_fetch_image' &&
                             toolName.startsWith('discord_') && 
                             !this.toolContext!.client.isReady()) {
                             error(`Client not ready for tool ${toolName}, client state: ${JSON.stringify({

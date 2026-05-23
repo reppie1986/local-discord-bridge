@@ -67,6 +67,11 @@ export const ReadMessagesSchema = z.object({
     limit: z.number().min(1).max(100).optional().default(50)
 });
 
+export const GetMessageSchema = z.object({
+    channelId: z.string(),
+    messageId: z.string()
+});
+
 export const GetServerInfoSchema = z.object({
     guildId: z.string()
 });

@@ -5,7 +5,12 @@ import { platform } from 'node:process';
 import type { Manifest } from '@extension/dev-utils';
 import { colorLog, ManifestParser } from '@extension/dev-utils';
 import type { PluginOption } from 'vite';
-import { IS_DEV, IS_FIREFOX } from '@extension/env';
+import env, { IS_DEV } from '@extension/env';
+// The env object includes CLI_CEB_FIREFOX from .env (written by
+// set-global-env.sh).  process.env doesn't inherit .env, so reading
+// IS_FIREFOX from @extension/env would miss the flag — use the parsed
+// env object instead.
+const IS_FIREFOX = env.CLI_CEB_FIREFOX === 'true';
 
 const manifestFile = resolve(import.meta.dirname, '..', '..', 'manifest.js');
 const refreshFilePath = resolve(

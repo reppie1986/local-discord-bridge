@@ -1,0 +1,27 @@
+{
+  "scopes": {
+    "home": {
+      "guildIds": ["YOUR_HOME_SERVER_ID"],
+      "channelIds": [
+        "YOUR_MAIN_CHANNEL_ID",
+        "YOUR_PROJECT_CHANNEL_ID",
+        "YOUR_PRIVATE_CHANNEL_ID"
+      ],
+      "defaultChannelId": "YOUR_MAIN_CHANNEL_ID",
+      "routingMode": "mentions_only",
+      "includeRepliesToSelf": true
+    },
+
+    "community": {
+      "guildIds": ["YOUR_COMMUNITY_SERVER_ID"],
+      "channelIds": [
+        "YOUR_ALLOWED_GENERAL_CHANNEL_ID",
+        "YOUR_ALLOWED_AI_CHANNEL_ID"
+      ],
+      "defaultChannelId": "YOUR_ALLOWED_GENERAL_CHANNEL_ID",
+      "routingMode": "name_match",
+      "names": ["CompanionName", "companionname"],
+      "includeRepliesToSelf": true
+    }
+  }
+}

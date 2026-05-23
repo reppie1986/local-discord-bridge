@@ -14,6 +14,7 @@ import {
   createTextChannelHandler,
   deleteChannelHandler,
   readMessagesHandler,
+  getMessageHandler,
   createCategoryHandler,
   editCategoryHandler,
   deleteCategoryHandler
@@ -51,6 +52,7 @@ export {
   createTextChannelHandler,
   deleteChannelHandler,
   readMessagesHandler,
+  getMessageHandler,
   getServerInfoHandler,
   addReactionHandler,
   addMultipleReactionsHandler,

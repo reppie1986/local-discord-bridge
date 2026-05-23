@@ -42,40 +42,40 @@ const styles = `
 }
 
 .mcp-main-button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  width: max-content;
-  height: max-content;
   justify-content: center;
-  padding: 4px 8px;
-  border-radius: 10px;
-  background-color: #e8f0fe;
-  border: 1px solid #dadce0;
+  gap: 4px;
+  height: 28px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background-color: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
   cursor: pointer;
-  transition: all 0.2s ease;
-  color: #202124;
+  transition: all 0.15s ease;
+  color: #c4c4c4;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(60,64,67,0.08);
-  letter-spacing: 0.3px;
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
+  user-select: none;
+  outline: none;
+  line-height: 1;
 }
 
 .mcp-main-button:hover {
-  background-color: #aecbfa;
-  box-shadow: 0 2px 4px rgba(60,64,67,0.12);
+  background-color: rgba(255,255,255,0.1);
+  color: #e0e0e0;
 }
 
 .mcp-main-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 0 1px rgba(60,64,67,0.08);
+  transform: none;
 }
 
 .mcp-main-button.inactive {
-  background-color: #f5f7f9;
-  border-color: #dadce0;
-  color: #5f6368;
+  background-color: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.06);
+  color: #6b6b6b;
 }
 
 .mcp-popover {
@@ -324,20 +324,20 @@ input:checked + .mcp-toggle-slider:before {
 
 @media (prefers-color-scheme: dark) {
   .mcp-main-button {
-    background-color: #174ea6;
-    border-color: #8ab4f8;
-    color: #e8eaed;
+    background-color: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.10);
+    color: #c4c4c4;
   }
 
   .mcp-main-button:hover {
-    background-color: #8ab4f8;
-    color: #202124;
+    background-color: rgba(255,255,255,0.12);
+    color: #e0e0e0;
   }
 
   .mcp-main-button.inactive {
-    background-color: #2d2d2d;
-    border-color: #444;
-    color: #9aa0a6;
+    background-color: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.06);
+    color: #6b6b6b;
   }
 
   .mcp-popover {
@@ -1136,21 +1136,20 @@ export const MCPPopover: React.FC<MCPPopoverProps> = ({ toggleStateManager, adap
   const buttonContent = adapterButtonConfig?.contentClassName ? (
     <span className={adapterButtonConfig.contentClassName}>
         <img 
-          src={chrome.runtime.getURL('icon-34.png')} 
-          alt="MCP Logo" 
+          src={chrome.runtime.getURL('icon-128.png')} 
+          alt="MCP"
           className={adapterButtonConfig.iconClassName || ''}
-        style={{ width: '20px', height: '20px', borderRadius: '50%' }}
+        style={{ width: '14px', height: '14px', borderRadius: '3px' }}
         />
       <span className={adapterButtonConfig.textClassName || ''}>Discord</span>
     </span>
   ) : (
     <>
       <img 
-        src={chrome.runtime.getURL('icon-34.png')} 
-        alt="MCP Logo" 
-        style={{ width: '20px', height: '20px', marginRight: '1px', verticalAlign: 'middle', borderRadius: '50%' }}
+        src={chrome.runtime.getURL('icon-128.png')} 
+        alt="MCP" 
+        style={{ width: '14px', height: '14px', borderRadius: '3px' }}
       />
-      MCP
     </>
   );
 

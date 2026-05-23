@@ -948,6 +948,34 @@ export const extractFunctionParameters = (rawContent: string): Record<string, an
 };
 
 /**
+ * Decode a base64 string to a Uint8Array without using atob (which corrupts
+ * binary data via UTF-16 round-tripping for large payloads). Browser-safe,
+ * sync, zero-dep.
+ */
+const base64ToUint8 = (b64: string): Uint8Array => {
+  const binary = atob(b64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+};
+
+const mimeToExtension = (mime: string): string => {
+  switch (mime) {
+    case 'image/png': return 'png';
+    case 'image/jpeg': return 'jpg';
+    case 'image/gif': return 'gif';
+    case 'image/webp': return 'webp';
+    case 'image/bmp': return 'bmp';
+    case 'image/avif': return 'avif';
+    case 'image/svg+xml': return 'svg';
+    case 'video/mp4': return 'mp4';
+    case 'video/webm': return 'webm';
+    default: return 'bin';
+  }
+};
+
+/**
  * Optimized file attachment helper with improved performance
  * Performance improvements: reduce DOM operations, batch state changes, efficient event handling
  * Updated to work with the new plugin-based adapter system
@@ -960,6 +988,7 @@ const attachResultAsFile = async (
   button: HTMLButtonElement,
   iconSpan: HTMLElement | null,
   skipAutoInsertCheck: boolean = false,
+  imageBlocks: Array<{ data: string; mimeType: string }> = [],
 ): Promise<{ success: boolean; message: string | null }> => {
   // Early validation for better performance
   if (!adapter) {
@@ -997,6 +1026,93 @@ const attachResultAsFile = async (
 
     handleUnsupported();
     return { success: false, message: null };
+  }
+
+  // If the tool response contained binary image content blocks (e.g. from
+  // discord_fetch_image), attach the actual image bytes — this is the path
+  // that makes GPT/Gemini SEE the picture instead of receiving a text file
+  // describing it. Falls through to the normal .txt wrap if no images.
+  if (imageBlocks.length > 0 && typeof adapter.attachFile === 'function') {
+    const attachedNames: string[] = [];
+    let anyFailure = false;
+    for (let i = 0; i < imageBlocks.length; i++) {
+      const blk = imageBlocks[i];
+      try {
+        const bytes = base64ToUint8(blk.data);
+        const ext = mimeToExtension(blk.mimeType);
+        const imgName = imageBlocks.length === 1
+          ? `${functionName}_${callId}.${ext}`
+          : `${functionName}_${callId}_${i + 1}.${ext}`;
+        const imgFile = new File([bytes], imgName, { type: blk.mimeType });
+        const ok = await adapter.attachFile(imgFile);
+        if (!ok) {
+          anyFailure = true;
+          logger.warn(`Adapter.attachFile returned false for image ${imgName}`);
+        } else {
+          attachedNames.push(imgName);
+          requestAnimationFrame(() => {
+            document.dispatchEvent(
+              new CustomEvent('mcp:tool-execution-complete', {
+                detail: {
+                  file: imgFile,
+                  result: null,
+                  isFileAttachment: true,
+                  fileName: imgName,
+                  confirmationText: null,
+                  skipAutoInsertCheck: true,
+                  callId,
+                  functionName,
+                },
+              }),
+            );
+          });
+        }
+      } catch (e) {
+        anyFailure = true;
+        logger.error(`Failed to attach image block ${i + 1}:`, e);
+      }
+    }
+
+    if (attachedNames.length > 0) {
+      const msg = `Attached ${attachedNames.length} image${attachedNames.length === 1 ? '' : 's'}: ${attachedNames.join(', ')}`;
+      if (rawResultText && typeof adapter.insertText === 'function') {
+        try {
+          await adapter.insertText(rawResultText);
+        } catch (err) {
+          logger.warn('Failed to insert text portion after image attach:', err);
+        }
+      }
+
+      // Dispatch a final event WITHOUT skipAutoInsertCheck so the
+      // automation service can auto-submit the composer contents
+      // (image chips + metadata text) to the model. The service's
+      // built-in autoSubmitDelay (default 800ms) gives ChatGPT time
+      // to process the file chip before the form submits.
+      requestAnimationFrame(() => {
+        document.dispatchEvent(
+          new CustomEvent('mcp:tool-execution-complete', {
+            detail: {
+              result: rawResultText,
+              isFileAttachment: false,
+              fileName: '',
+              skipAutoInsertCheck: false,
+              callId,
+              functionName,
+            },
+          }),
+        );
+      });
+
+      button.innerHTML = `${ICONS.ATTACH}<span>Image attached</span>`;
+      button.classList.add('attach-success');
+      button.disabled = true;
+      setTimeout(() => {
+        button.innerHTML = `${ICONS.ATTACH}<span>Attach File</span>`;
+        button.classList.remove('attach-success');
+        button.disabled = false;
+      }, 2000);
+      return { success: !anyFailure, message: msg };
+    }
   }
 
   const fileName = `${functionName}_result_call_id_${callId}.txt`;
@@ -1348,6 +1464,11 @@ export const displayResult = (
   if (success) {
     // Optimized success result processing
     let rawResultText = '';
+    // Image content blocks (MCP shape: { type: "image", data: base64, mimeType }).
+    // Captured here so the Insert/Attach buttons can hand the real bytes to the
+    // adapter's attachFile — that's how GPT/Gemini actually SEE the image
+    // instead of getting a .txt file describing it.
+    let extractedImageBlocks: Array<{ data: string; mimeType: string }> = [];
 
     // Create result content efficiently
     const resultContent = createOptimizedElement('div', {
@@ -1359,17 +1480,20 @@ export const displayResult = (
       try {
         // Check if result has the new format with content array
         if (result && result.content && Array.isArray(result.content)) {
-          // Extract text and image content from content array
+          // Capture image blocks before filtering down to text
+          extractedImageBlocks = result.content
+            .filter((item: any) => item.type === 'image' && typeof item.data === 'string' && item.data.length > 0)
+            .map((item: any) => ({
+              data: item.data as string,
+              mimeType: (item.mimeType as string) || 'image/png',
+            }));
+
+          // Extract text content from content array
           const textParts = result.content
             .filter((item: any) => item.type === 'text' && item.text)
             .map((item: any) => item.text);
 
-          // Include image content as markdown images for ChatGPT to render
-          const imageParts = result.content
-            .filter((item: any) => item.type === 'image' && item.data && item.mimeType)
-            .map((item: any) => `![image](data:${item.mimeType};base64,${item.data})`);
-
-          const allParts = [...textParts, ...imageParts];
+          const allParts = [...textParts];
 
           if (allParts.length > 0) {
             rawResultText = allParts.join('\n\n');
@@ -1483,8 +1607,25 @@ export const displayResult = (
 
       const wrapperText = `<function_result call_id="${callId}">\n${rawResultText}\n</function_result>`;
 
+      // Image content blocks ALWAYS go through attachResultAsFile so the
+      // companion's next turn carries the real image bytes as a vision input,
+      // regardless of the text length. Without this branch a vision tool call
+      // like discord_fetch_image would only paste its status JSON.
+      if (extractedImageBlocks.length > 0) {
+        logger.debug(`Result has ${extractedImageBlocks.length} image block(s); attaching as binary.`);
+        await attachResultAsFile(
+          adapter,
+          functionName,
+          callId,
+          wrapperText,
+          insertButton,
+          insertButton.querySelector('span') as HTMLElement,
+          true,
+          extractedImageBlocks,
+        );
+      }
       // Check result length and handle accordingly
-      if (rawResultText.length > MAX_INSERT_LENGTH && WEBSITE_NAME_FOR_MAX_INSERT_LENGTH_CHECK.includes(websiteName)) {
+      else if (rawResultText.length > MAX_INSERT_LENGTH && WEBSITE_NAME_FOR_MAX_INSERT_LENGTH_CHECK.includes(websiteName)) {
         logger.debug(`Result length (${wrapperText.length}) exceeds ${MAX_INSERT_LENGTH}. Attaching as file.`);
         await attachResultAsFile(
           adapter,
@@ -1638,8 +1779,9 @@ export const displayResult = (
         callId,
         rawResultText,
         attachButton,
-        null, // No longer need iconSpan parameter
-        true, // Set skipAutoInsertCheck to true to prevent AutomationService from auto-inserting the same file
+        null,
+        true,
+        extractedImageBlocks,
       );
     };
 
@@ -1672,7 +1814,7 @@ export const displayResult = (
         }) as HTMLButtonElement,
       };
 
-      attachResultAsFile(adapter, functionName, callId, rawResultText, fakeElements.button, null, true) // Set to true to prevent double attachment
+      attachResultAsFile(adapter, functionName, callId, rawResultText, fakeElements.button, null, true, extractedImageBlocks)
         .then(async ({ success, message }) => {
           if (success && message) {
             logger.debug(`Auto-attached file successfully: ${message}`);

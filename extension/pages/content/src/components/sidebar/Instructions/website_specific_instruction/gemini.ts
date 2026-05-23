@@ -79,6 +79,32 @@ User: "What's been said in #general in the last 20 messages?"
 
 After the function_results come back, summarize / respond / take next action.
 
+# Seeing Discord images and GIFs
+
+discord_read_messages and discord_get_forum_post return a top-level
+\`image_refs\` array listing every viewable image/GIF in the batch — Discord CDN
+attachments, link-preview thumbnails, Tenor / Giphy embeds, custom stickers.
+Each entry has \`url\`, \`source\` (attachment | embed-image | embed-thumbnail |
+embed-video | sticker), and dimensions.
+
+If you want to ACTUALLY SEE one of those images (read text in a screenshot,
+react to a meme, describe what's in a photo), call \`discord_fetch_image\` on
+its URL. The extension intercepts the response and attaches the real image
+bytes to your next user message as a vision input. You then receive that image
+on the following turn and can describe it natively.
+
+\`\`\`json
+{"type": "function_call_start", "name": "discord_fetch_image", "call_id": 2}
+{"type": "description", "text": "Fetch the screenshot Fox just posted so I can read it"}
+{"type": "parameter", "key": "url", "value": "https://media.discordapp.net/attachments/123/456/photo.png"}
+{"type": "function_call_end", "call_id": 2}
+\`\`\`
+
+Be selective — don't fetch every image in a busy channel. Pick the ones that
+matter to the user's question. For Tenor / Giphy GIFs, fetching the
+\`embed-thumbnail\` URL gets you the still frame; \`embed-video\` is the mp4
+loop.
+
 # Rules
 
 1. ONE function-call block per reply. Wait for results before the next call.

@@ -122,19 +122,63 @@ export const getForumPostHandler: ToolHandler = async (args, { client }) => {
 
     // Get messages from the thread
     const messages = await thread.messages.fetch({ limit: 10 });
-    
+
+    const formattedMessages = messages.map(msg => {
+      const attachments = msg.attachments.map(a => ({
+        id: a.id,
+        filename: a.name,
+        url: a.url,
+        proxy_url: a.proxyURL,
+        content_type: a.contentType,
+        size: a.size,
+        width: a.width,
+        height: a.height
+      }));
+      const embeds = msg.embeds.map(e => {
+        const out: any = {
+          type: (e as any).data?.type ?? null,
+          url: e.url ?? null,
+          title: e.title ?? null,
+          description: e.description ?? null,
+          provider: e.provider ? { name: e.provider.name, url: e.provider.url } : null
+        };
+        if (e.image) out.image = { url: e.image.url, proxy_url: e.image.proxyURL, width: e.image.width, height: e.image.height };
+        if (e.thumbnail) out.thumbnail = { url: e.thumbnail.url, proxy_url: e.thumbnail.proxyURL, width: e.thumbnail.width, height: e.thumbnail.height };
+        if (e.video) out.video = { url: e.video.url, proxy_url: e.video.proxyURL, width: e.video.width, height: e.video.height };
+        return out;
+      });
+      return {
+        id: msg.id,
+        content: msg.content,
+        author: msg.author.tag,
+        createdAt: msg.createdAt,
+        attachments,
+        embeds
+      };
+    });
+
+    const image_refs: Array<{ message_id: string; source: string; url: string; width?: number | null; height?: number | null }> = [];
+    for (const m of formattedMessages) {
+      for (const a of m.attachments) {
+        if (a.content_type && a.content_type.startsWith('image/')) {
+          image_refs.push({ message_id: m.id, source: 'attachment', url: a.url, width: a.width, height: a.height });
+        }
+      }
+      for (const e of m.embeds) {
+        if (e.image?.url) image_refs.push({ message_id: m.id, source: 'embed-image', url: e.image.url, width: e.image.width, height: e.image.height });
+        if (e.thumbnail?.url) image_refs.push({ message_id: m.id, source: 'embed-thumbnail', url: e.thumbnail.url, width: e.thumbnail.width, height: e.thumbnail.height });
+        if (e.video?.url && (e.type === 'gifv' || e.type === 'image')) image_refs.push({ message_id: m.id, source: 'embed-video', url: e.video.url, width: e.video.width, height: e.video.height });
+      }
+    }
+
     const threadDetails = {
       id: thread.id,
       name: thread.name,
       parentId: thread.parentId,
       messageCount: messages.size,
       createdAt: thread.createdAt,
-      messages: messages.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        author: msg.author.tag,
-        createdAt: msg.createdAt
-      }))
+      messages: formattedMessages,
+      image_refs
     };
 
     return {

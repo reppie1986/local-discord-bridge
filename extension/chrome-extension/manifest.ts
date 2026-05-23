@@ -22,9 +22,9 @@ const manifest = {
     '*://*.chat.openai.com/*',
     '*://*.gemini.google.com/*',
     'http://localhost/*',
-    'http://localhost:*/*',
+    'http://localhost:8081/*',
     'http://127.0.0.1/*',
-    'http://127.0.0.1:*/*',
+    'http://127.0.0.1:8081/*',
   ],
   permissions: ['storage', 'clipboardWrite'],
   background: {
@@ -33,7 +33,6 @@ const manifest = {
   },
   icons: {
     128: 'icon-128.png',
-    34: 'icon-34.png',
   },
   content_scripts: [
     {
@@ -49,7 +48,7 @@ const manifest = {
   ],
   web_accessible_resources: [
     {
-      resources: ['*.js', '*.css', 'content/*.css', '*.svg', 'icon-128.png', 'icon-34.png'],
+      resources: ['*.js', '*.css', 'content/*.css', '*.svg', 'icon-128.png'],
       matches: ['*://*/*'],
     },
   ],

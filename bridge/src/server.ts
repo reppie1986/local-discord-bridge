@@ -20,6 +20,7 @@ import {
   createTextChannelHandler,
   deleteChannelHandler,
   readMessagesHandler,
+  getMessageHandler,
   getServerInfoHandler,
   addReactionHandler,
   addMultipleReactionsHandler,
@@ -150,6 +151,11 @@ export class DiscordMCPServer {
           case "discord_read_messages":
             this.logClientState("before discord_read_messages handler");
             toolResponse = await readMessagesHandler(args, this.toolContext);
+            return toolResponse;
+
+          case "discord_get_message":
+            this.logClientState("before discord_get_message handler");
+            toolResponse = await getMessageHandler(args, this.toolContext);
             return toolResponse;
 
           case "discord_get_server_info":

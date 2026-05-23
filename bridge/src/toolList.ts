@@ -160,6 +160,18 @@ export const toolList = [
     }
   },
   {
+    name: "discord_get_message",
+    description: "Fetches a single Discord message by channel and message ID",
+    inputSchema: {
+      type: "object",
+      properties: {
+        channelId: { type: "string" },
+        messageId: { type: "string" }
+      },
+      required: ["channelId", "messageId"]
+    }
+  },
+  {
     name: "discord_get_server_info",
     description: "Retrieves detailed information about a Discord server including channels and member count",
     inputSchema: {
