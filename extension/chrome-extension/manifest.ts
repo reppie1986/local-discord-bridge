@@ -21,6 +21,7 @@ const manifest = {
     '*://*.chatgpt.com/*',
     '*://*.chat.openai.com/*',
     '*://*.gemini.google.com/*',
+    '*://*.chat.deepseek.com/*',
     'http://localhost/*',
     'http://localhost:8081/*',
     'http://127.0.0.1/*',
@@ -42,6 +43,11 @@ const manifest = {
     },
     {
       matches: ['*://*.gemini.google.com/*'],
+      js: ['content/index.iife.js'],
+      run_at: 'document_idle',
+    },
+    {
+      matches: ['*://*.chat.deepseek.com/*'],
       js: ['content/index.iife.js'],
       run_at: 'document_idle',
     },

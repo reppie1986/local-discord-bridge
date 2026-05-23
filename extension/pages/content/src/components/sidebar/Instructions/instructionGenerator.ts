@@ -2,6 +2,7 @@
 import { jsonSchemaToCsn } from './schema_converter';
 import { chatgptInstructions } from './website_specific_instruction/chatgpt';
 import { geminiInstructions } from './website_specific_instruction/gemini';
+import { deepseekInstructions } from './website_specific_instruction/deepseek';
 import { createLogger } from '@extension/shared/lib/logger';
 
 /**
@@ -137,6 +138,11 @@ Do not use <thoughts> tag in your output, that is just output format reference t
   //# ChatGPT-Specific Instructions
   if (currentHost.includes('chatgpt')) {
     instructions += chatgptInstructions;
+  }
+
+  //# DeepSeek-Specific Instructions
+  if (currentHost.includes('deepseek')) {
+    instructions += deepseekInstructions;
   }
 
   // instructions += 'To use an MCP tool, wrap your tool call in `<use_mcp_tool>` tags like this:\n\n';

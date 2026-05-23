@@ -28,10 +28,10 @@ export class DeepSeekAdapter extends BaseAdapterPlugin {
   // CSS selectors for DeepSeek's UI elements
   // Updated selectors based on current DeepSeek interface
   private readonly selectors = {
-    // Primary chat input selector - DeepSeek uses textarea elements
-    CHAT_INPUT: 'textarea[spellcheck="false"], textarea[data-gramm="false"], textarea[placeholder*="Ask"], textarea[placeholder*="Message DeepSeek"], textarea.chat-input, div[contenteditable="true"]',
+    // Primary chat input selector - DeepSeek uses textarea
+    CHAT_INPUT: 'textarea[placeholder*="DeepSeek"], textarea',
     // Submit button selectors (multiple fallbacks)
-    SUBMIT_BUTTON: 'button[aria-label*="Send"], button[data-testid="send-button"], button.send-button, svg.send-icon',
+    SUBMIT_BUTTON: 'button[aria-label*="Send"], button[data-testid="send-button"]',
     // File upload related selectors
     FILE_UPLOAD_BUTTON: 'button[aria-label*="attach"], button[aria-label*="file"], input[type="file"]',
     FILE_INPUT: 'input[type="file"]',
@@ -41,10 +41,18 @@ export class DeepSeekAdapter extends BaseAdapterPlugin {
     DROP_ZONE: '.chat-input-container, .input-area, .message-input, .chat-input, .file-drop-area',
     // File preview elements
     FILE_PREVIEW: '.file-preview, .attachment-preview, .uploaded-file',
-    // Button insertion points (for MCP popover) - DeepSeek specific
-    BUTTON_INSERTION_CONTAINER: '.ec4f5d61, .chat-input-actions, .input-actions, .actions-wrapper',
+    // Assistant message content
+    ASSISTANT_CONTENT: '.ds-markdown.ds-assistant-message-main-content',
+    // Message wrapper
+    MESSAGE_WRAPPER: '.ds-message',
+    // Message list
+    MESSAGE_LIST: '.ds-virtual-list-visible-items, .ds-virtual-list-items, .ds-virtual-list',
+    // Send button SVG path prefix for identification
+    SEND_BUTTON_PATH_PREFIX: 'M8.3125',
+    // Button insertion strategy - find textarea and its container
+    BUTTON_INSERTION_CONTAINER: '.ds-icon-button[role="button"], .chat-input-actions, .input-actions, .actions-wrapper',
     // Alternative insertion points
-    FALLBACK_INSERTION: '.input-area, .chat-input-container, ._24fad49, .bf38813a, .aaff8b8f'
+    FALLBACK_INSERTION: '.input-area, .chat-input-container'
   };
 
   // URL patterns for navigation tracking
@@ -376,9 +384,41 @@ export class DeepSeekAdapter extends BaseAdapterPlugin {
   async submitForm(options?: { formElement?: HTMLFormElement }): Promise<boolean> {
     this.context.logger.debug('Attempting to submit DeepSeek chat input');
 
-    let submitButton: HTMLButtonElement | null = null;
+    try {
+      // Primary method: find send button via textarea parent + SVG path
+      const textarea = document.querySelector('textarea[placeholder*="DeepSeek"], textarea');
+      if (textarea) {
+        const inputRoot = (textarea as HTMLElement).closest('div')?.parentElement;
+        if (inputRoot) {
+          const candidates = Array.from(inputRoot.querySelectorAll('[role="button"].ds-icon-button'));
+          const sendButton = candidates.find(el =>
+            el.querySelector('path')?.getAttribute('d')?.startsWith('M8.3125')
+          ) || candidates.at(-1);
 
-    // Try multiple selectors for better compatibility
+          if (sendButton && sendButton instanceof HTMLElement) {
+            if ((sendButton as HTMLButtonElement).disabled) {
+              this.context.logger.warn('DeepSeek submit button is disabled');
+              this.emitExecutionFailed('submitForm', 'Submit button is disabled');
+              return false;
+            }
+            sendButton.click();
+            this.emitExecutionCompleted('submitForm', {
+              formElement: options?.formElement?.tagName || 'unknown'
+            }, {
+              success: true,
+              method: 'sendButton.svgPath'
+            });
+            this.context.logger.debug('DeepSeek chat input submitted successfully');
+            return true;
+          }
+        }
+      }
+    } catch (error) {
+      this.context.logger.error(`Error in primary submit method: ${error}`);
+    }
+
+    // Fallback: try aria-label selectors
+    let submitButton: HTMLButtonElement | null = null;
     const selectors = this.selectors.SUBMIT_BUTTON.split(', ');
     for (const selector of selectors) {
       submitButton = document.querySelector(selector.trim()) as HTMLButtonElement;
@@ -394,25 +434,18 @@ export class DeepSeekAdapter extends BaseAdapterPlugin {
     }
 
     try {
-      // Check if the button is disabled
       if (submitButton.disabled) {
         this.context.logger.warn('DeepSeek submit button is disabled');
         this.emitExecutionFailed('submitForm', 'Submit button is disabled');
         return false;
       }
-
-      // Check if the button is visible and clickable
       const rect = submitButton.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) {
         this.context.logger.warn('DeepSeek submit button is not visible');
         this.emitExecutionFailed('submitForm', 'Submit button is not visible');
         return false;
       }
-
-      // Click the submit button to send the message
       submitButton.click();
-
-      // Emit success event to the new event system
       this.emitExecutionCompleted('submitForm', {
         formElement: options?.formElement?.tagName || 'unknown'
       }, {
@@ -420,7 +453,6 @@ export class DeepSeekAdapter extends BaseAdapterPlugin {
         method: 'submitButton.click',
         buttonSelector: selectors.find(s => document.querySelector(s.trim()) === submitButton)
       });
-
       this.context.logger.debug('DeepSeek chat input submitted successfully');
       return true;
     } catch (error) {
@@ -910,65 +942,46 @@ export class DeepSeekAdapter extends BaseAdapterPlugin {
   private findButtonInsertionPoint(): { container: Element; insertAfter: Element | null } | null {
     this.context.logger.debug('Finding button insertion point for MCP popover');
 
-    // Try DeepSeek-specific button container first (.ec4f5d61)
-    const buttonContainer = document.querySelector('.ec4f5d61');
-    if (buttonContainer) {
-      this.context.logger.debug('Found DeepSeek button container (.ec4f5d61)');
-
-      // Find the attach button container (.bf38813a) - we want to insert BEFORE this
-      const attachContainer = buttonContainer.querySelector('.bf38813a');
-      if (attachContainer) {
-        this.context.logger.debug('Found attach button container, will insert before it');
-        // Find the last toggle button (Search button) before the attach container
-        const toggleButtons = buttonContainer.querySelectorAll('.ds-toggle-button');
-        if (toggleButtons.length > 0) {
-          const lastToggleButton = toggleButtons[toggleButtons.length - 1];
-          this.context.logger.debug('Will insert after last toggle button (Search)');
-          return { container: buttonContainer, insertAfter: lastToggleButton };
-        }
-        // Fallback: insert at the beginning of container, before attach button
-        return { container: buttonContainer, insertAfter: null };
-      }
-
-      // Fallback: Look for search button specifically
-      const buttons = buttonContainer.querySelectorAll('.ds-button');
-      for (const button of Array.from(buttons)) {
-        const buttonText = button.textContent?.trim();
-        if (buttonText === 'Search') {
-          this.context.logger.debug('Found search button, will insert after it');
-          return { container: buttonContainer, insertAfter: button };
-        }
-      }
-
-      // If search button not found, use last button
-      const lastButton = buttonContainer.querySelector('.ds-button:last-child');
-      if (lastButton) {
-        this.context.logger.debug('Using last button as insertion point');
-        return { container: buttonContainer, insertAfter: lastButton };
-      }
+    // Find textarea using stable selector
+    const textarea = document.querySelector('textarea[placeholder*="DeepSeek"], textarea');
+    if (!textarea) {
+      this.context.logger.debug('Could not find textarea for button insertion point');
+      return null;
     }
 
-    // Try fallback selectors
-    const fallbackSelectors = [
-      '._24fad49', // Textarea parent
-      '.bf38813a', // File upload container
-      '.aaff8b8f', // Chat input area
-      '.chat-input-actions',
-      '.input-actions',
-      '.actions-wrapper'
-    ];
+    // Navigate to the input root container (parent of textarea's parent)
+    const inputRoot = (textarea as HTMLElement).closest('div')?.parentElement;
+    if (!inputRoot) {
+      this.context.logger.debug('Could not find input root container');
+      return null;
+    }
 
-    for (const selector of fallbackSelectors) {
-      const container = document.querySelector(selector);
-      if (container) {
-        this.context.logger.debug(`Found fallback insertion point: ${selector}`);
-        // For these fallback containers, try to find a suitable insertion point
-        if (container.parentElement) {
-          return { container: container.parentElement, insertAfter: container };
-        } else {
-          return { container, insertAfter: null };
-        }
-      }
+    // Find all icon buttons in the input area
+    const buttons = Array.from(inputRoot.querySelectorAll('[role="button"].ds-icon-button'));
+    if (buttons.length === 0) {
+      this.context.logger.debug('No icon buttons found, using inputRoot as container');
+      return { container: inputRoot, insertAfter: null };
+    }
+
+    // Identify send button by SVG path prefix
+    const sendButton = buttons.find(el =>
+      el.querySelector('path')?.getAttribute('d')?.startsWith('M8.3125')
+    );
+
+    if (sendButton && sendButton.parentElement) {
+      this.context.logger.debug('Found send button, will insert MCP popover before it');
+      return {
+        container: sendButton.parentElement,
+        insertAfter: sendButton.previousElementSibling
+      };
+    }
+
+    // Fallback: insert after the last icon button
+    const lastButton = buttons[buttons.length - 1];
+    const toolbar = lastButton.parentElement;
+    if (toolbar) {
+      this.context.logger.debug('Send button not identified, inserting after last icon button');
+      return { container: toolbar, insertAfter: lastButton };
     }
 
     this.context.logger.debug('Could not find suitable insertion point for MCP popover');
