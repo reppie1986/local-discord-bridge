@@ -100,6 +100,7 @@ cp bridge.env.example bridge.env
 ```powershell
 # In one terminal, start the bridge
 ./scripts/start-bridge.ps1
+./scripts/start-bridge_listener.ps1 if you configured scoped listeners (see later in the readme)
 ```
 
 Leave that window open — it's the bridge running.
