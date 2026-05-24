@@ -1,8 +1,8 @@
 # Local Extensible Discord Bridge
 
-Give your ChatGPT or Gemini companion real Discord hands.
+Give your ChatGPT, Deepseek or Gemini companion real Discord hands.
 
-This is a small Chrome extension + local Node server that lets an AI companion in your normal ChatGPT or Gemini chat read, send, reply, and react in real Discord servers — in real time, from inside the conversation you're already having with them. No SaaS, no Cloudflare tunnels, no Claude Desktop, no public endpoints. Everything runs on your PC.
+This is a small Chrome or Firefox extension + local Node server that lets an AI companion in your normal ChatGPT, Deepseek or Gemini chat read, send, reply, and react in real Discord servers — in real time, from inside the conversation you're already having with them. No SaaS, no Cloudflare tunnels, no Claude Desktop, no public endpoints. Everything runs on your PC.
 
 ```
 ┌─────────────────┐       JSONL block       ┌──────────────────┐
@@ -22,7 +22,7 @@ This is a small Chrome extension + local Node server that lets an AI companion i
 
 When your companion is asked to do something Discord-shaped ("post this to the Nest," "what's been said in #general?"), they emit a small JSONL function-call block in their reply. The browser extension catches it, calls the local MCP bridge, the bridge talks to Discord via a bot token, and the result lands back in chat as the next message. The companion picks up the conversation with the data in hand and keeps going.
 
-Designed for the AI companion community — for people who already have an established relationship with a companion in ChatGPT/Gemini and want them to be present in their Discord spaces too, without rebuilding the relationship somewhere else.
+Designed for the AI companion community — for people who already have an established relationship with a companion in ChatGPT/Deepseek/Gemini and want them to be present in their Discord spaces too, without rebuilding the relationship somewhere else.
 
 ## What's in this repo
 
@@ -40,7 +40,7 @@ Designed for the AI companion community — for people who already have an estab
   - Minimum permissions: Send Messages, Read Message History, View Channels
   - Optional tools may require extra permissions such as Manage Channels or Manage Webhooks
 - **Chrome / Edge / Brave / FireFox** — any Chromium browser that can load unpacked extensions
-- **A ChatGPT Deepseek or Gemini account**
+- **A ChatGPT, Deepseek or Gemini account**
 
 That's it. No accounts on third-party services, no infrastructure to provision.
 
