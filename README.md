@@ -34,19 +34,13 @@ Designed for the AI companion community — for people who already have an estab
 ## Requirements
 
 - **Node.js 18 or newer** — https://nodejs.org
-- **A Discord bot** you've created and added to your server — https://discord.com/developers/applications
-  - Permissions needed at minimum: Send Messages, Read Message History, View Channels
-- **Chrome / Edge / Brave** — anywhere you can load an unpacked extension
-- **A ChatGPT or Gemini account** — free works, paid works
-
-- **Node.js 18 or newer** — https://nodejs.org
 - **pnpm** for building the extension — use `corepack enable` or `npm i -g pnpm`
 - **Git for Windows** on Windows, if the extension postinstall needs `bash` on PATH
 - **A Discord bot** you've created and added to your server
   - Minimum permissions: Send Messages, Read Message History, View Channels
   - Optional tools may require extra permissions such as Manage Channels or Manage Webhooks
 - **Chrome / Edge / Brave / FireFox** — any Chromium browser that can load unpacked extensions
-- **A ChatGPT or Gemini account**
+- **A ChatGPT Deepseek or Gemini account**
 
 That's it. No accounts on third-party services, no infrastructure to provision.
 
